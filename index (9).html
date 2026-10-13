@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Undertale Green</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      image-rendering: pixelated;
+      user-select: none;
+    }
+
+    #game-container {
+      position: relative;
+      width: 640px;
+      max-width: 96vw;
+      height: 480px;
+      max-height: 90vh;
+      border: 3px solid #333;
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* ===== SCREENS ===== */
+    .screen { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* Title */
+    #title-screen {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+    #title-screen h1 {
+      font-size: 26px;
+      color: #0f0;
+      text-shadow: 0 0 12px #0f0, 0 0 24px #0a0;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    #title-screen .subtitle { font-size: 11px; color: #888; margin-bottom: 20px; }
+    .soul-preview {
+      width: 40px; height: 40px; margin: 12px auto 20px; position: relative;
+    }
+    .soul-preview .heart {
+      width: 100%; height: 100%;
+      background: #0f0;
+      clip-path: path('M20 36 C20 36 2 24 2 14 C2 7 7 3 13 3 C17 3 20 7 20 11 C20 7 23 3 27 3 C33 3 38 7 38 14 C38 24 20 36 20 36 Z');
+      filter: drop-shadow(0 0 8px #0f0);
+    }
+    #title-screen p { font-size: 9px; line-height: 1.7; color: #aaa; max-width: 420px; margin: 0 auto 24px; }
+    .btn {
+      background: #000; border: 3px solid #fff; color: #fff;
+      font-family: 'Press Start 2P', monospace; font-size: 12px;
+      padding: 10px 24px; cursor: pointer; transition: all 0.1s; margin: 6px;
+    }
+    .btn:hover, .btn:focus { background: #fff; color: #000; outline: none; }
+    .btn.green { border-color: #0f0; color: #0f0; }
+    .btn.green:hover { background: #0f0; color: #000; }
+
+    /* Story / Dialogue screen */
+    #story-screen {
+      justify-content: flex-end;
+      background: #000;
+    }
+    #story-bg {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      position: relative;
+    }
+    #story-bg .scene-text {
+      position: absolute;
+      bottom: 20px;
+      font-size: 10px;
+      color: #666;
+      text-align: center;
+      width: 100%;
+    }
+    #story-dialogue {
+      border-top: 3px solid #fff;
+      background: #000;
+      padding: 16px 20px;
+      min-height: 110px;
+      font-size: 12px;
+      line-height: 1.6;
+      cursor: pointer;
+    }
+    #story-dialogue .speaker { color: #0f0; margin-bottom: 6px; font-size: 11px; }
+    #story-dialogue .prompt {
+      position: absolute;
+      right: 16px;
+      bottom: 12px;
+      font-size: 10px;
+      color: #666;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink { 50% { opacity: 0.3; } }
+
+    /* Overworld */
+    #overworld-screen {
+      background: #1a1a2e;
+    }
+    #map {
+      flex: 1;
+      position: relative;
+      background: #16213e;
+      overflow: hidden;
+    }
+    #player {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      z-index: 10;
+      transition: none;
+    }
+    #player .heart {
+      width: 100%; height: 100%;
+      background: #0f0;
+      clip-path: path('M10 18 C10 18 1 12 1 7 C1 3.5 3.5 1.5 6.5 1.5 C8.5 1.5 10 3.5 10 5.5 C10 3.5 11.5 1.5 13.5 1.5 C16.5 1.5 19 3.5 19 7 C19 12 10 18 10 18 Z');
+      filter: drop-shadow(0 0 4px #0f0);
+    }
+    .npc, .exit, .obstacle {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      z-index: 5;
+    }
+    .obstacle {
+      background: #333;
+      border: 1px solid #555;
+      font-size: 0;
+    }
+    #ow-ui {
+      height: 36px;
+      border-top: 2px solid #444;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 10px;
+      background: #0a0a12;
+    }
+    #ow-ui .kills { color: #f88; }
+    #ow-ui .route { color: #8af; }
+
+    /* Battle */
+    #battle-screen { background: #000; }
+    #ui-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      font-size: 10px;
+      height: 36px;
+    }
+    .name-hp { display: flex; align-items: center; gap: 8px; }
+    .hp-bar-container {
+      width: 80px; height: 14px;
+      background: #400; border: 2px solid #fff; position: relative;
+    }
+    .hp-bar { height: 100%; background: #0f0; width: 100%; transition: width 0.15s; }
+    .hp-text { font-size: 9px; min-width: 55px; }
+
+    #enemy-area {
+      height: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #enemy-sprite { font-size: 48px; line-height: 1; transition: transform 0.1s; }
+    #enemy-name { font-size: 11px; margin-top: 4px; color: #f88; }
+
+    #dialogue-box {
+      border: 3px solid #fff;
+      background: #000;
+      padding: 12px 16px;
+      min-height: 64px;
+      font-size: 11px;
+      line-height: 1.5;
+      margin: 0 12px 8px;
+      position: relative;
+    }
+    #dialogue-box .speaker { color: #0f0; margin-bottom: 4px; font-size: 10px; }
+
+    #battle-box {
+      width: 260px; height: 200px;
+      border: 4px solid #fff;
+      margin: 0 auto 8px;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+    #soul {
+      position: absolute;
+      width: 16px; height: 16px;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+    #soul .heart {
+      width: 100%; height: 100%;
+      background: #0f0;
+      clip-path: path('M8 14.5 C8 14.5 0.5 9.5 0.5 5.5 C0.5 2.8 2.8 1.2 5.2 1.2 C6.8 1.2 8 2.8 8 4.4 C8 2.8 9.2 1.2 10.8 1.2 C13.2 1.2 15.5 2.8 15.5 5.5 C15.5 9.5 8 14.5 8 14.5 Z');
+      filter: drop-shadow(0 0 3px #0f0);
+    }
+    #soul.red .heart {
+      background: #f00;
+      filter: drop-shadow(0 0 4px #f00);
+    }
+    #shield {
+      position: absolute;
+      width: 32px; height: 8px;
+      background: #0f0;
+      border: 2px solid #fff;
+      left: 50%; top: 50%;
+      transform-origin: center center;
+      z-index: 9;
+      box-shadow: 0 0 6px #0f0;
+      display: none;
+    }
+    .projectile {
+      position: absolute;
+      width: 10px; height: 10px;
+      background: #f44;
+      border-radius: 2px;
+      z-index: 5;
+      box-shadow: 0 0 5px #f00;
+    }
+    .projectile.spear {
+      width: 6px; height: 18px;
+      background: linear-gradient(to bottom, #fff 0%, #f44 40%, #a00 100%);
+      border-radius: 1px;
+    }
+    .projectile.pellet {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 6px #fff;
+    }
+    .projectile.vine {
+      width: 14px; height: 14px;
+      background: #0a0;
+      border-radius: 2px;
+      box-shadow: 0 0 6px #0f0;
+    }
+
+    #menu {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      font-size: 11px;
+      padding: 6px 0;
+    }
+    .menu-item {
+      cursor: pointer;
+      padding: 5px 12px;
+      border: 2px solid transparent;
+      transition: all 0.1s;
+    }
+    .menu-item.selected { border-color: #fff; color: #ff0; }
+    .menu-item:hover { color: #ff0; }
+
+    #instructions {
+      text-align: center;
+      font-size: 8px;
+      color: #555;
+      padding-bottom: 4px;
+    }
+
+    /* Result */
+    #result-screen {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px;
+    }
+    #result-screen h2 { font-size: 22px; margin-bottom: 16px; }
+    #result-screen.win h2 { color: #0f0; text-shadow: 0 0 10px #0f0; }
+    #result-screen.lose h2 { color: #f00; text-shadow: 0 0 10px #f00; }
+    #result-screen.true h2 { color: #f0f; text-shadow: 0 0 10px #f0f; }
+    #result-screen p { font-size: 11px; line-height: 1.7; margin-bottom: 24px; color: #ccc; max-width: 480px; }
+
+    .flash-red { animation: flashRed 0.3s; }
+    @keyframes flashRed {
+      0%, 100% { filter: none; }
+      50% { filter: brightness(2) sepia(1) hue-rotate(-50deg); }
+    }
+    .shake { animation: shake 0.25s; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    #mode-indicator {
+      position: absolute;
+      top: 4px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      color: #0f0;
+      z-index: 20;
+      display: none;
+    }
+    #mode-indicator.red { color: #f00; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- TITLE -->
+    <div id="title-screen" class="screen active">
+      <h1>UNDERTALE GREEN</h1>
+      <div class="subtitle">A Fan Game — Year 2003</div>
+      <div class="soul-preview"><div class="heart"></div></div>
+      <p>
+        You are <span style="color:#0f0">Willow</span>, a human whose SOUL shines with the color of <span style="color:#0f0">KINDNESS</span>.<br><br>
+        Mount Ebott awaits. Your choices will shape your fate.
+      </p>
+      <button class="btn green" id="start-btn">START</button>
+      <div style="margin-top:16px;font-size:8px;color:#444;">
+        Arrow Keys / WASD to move &amp; aim shield &nbsp;|&nbsp; Z / Enter to confirm
+      </div>
+    </div>
+
+    <!-- STORY / CUTSCENE -->
+    <div id="story-screen" class="screen">
+      <div id="story-bg">
+        <span id="story-emoji">🏔️</span>
+        <div class="scene-text" id="scene-label"></div>
+      </div>
+      <div id="story-dialogue">
+        <div class="speaker" id="story-speaker">*</div>
+        <div id="story-text"></div>
+        <div class="prompt">▼</div>
+      </div>
+    </div>
+
+    <!-- OVERWORLD -->
+    <div id="overworld-screen" class="screen">
+      <div id="map"></div>
+      <div id="ow-ui">
+        <span>WILLOW &nbsp; HP <span id="ow-hp">20/20</span></span>
+        <span class="kills">Kills: <span id="kill-count">0</span></span>
+        <span class="route" id="route-label">Route: ???</span>
+      </div>
+    </div>
+
+    <!-- BATTLE -->
+    <div id="battle-screen" class="screen">
+      <div id="ui-top">
+        <div class="name-hp">
+          <span style="color:#0f0" id="battle-name">WILLOW</span>
+          <span class="hp-text">LV <span id="lv">1</span></span>
+          <div class="hp-bar-container"><div class="hp-bar" id="player-hp-bar"></div></div>
+          <span class="hp-text" id="player-hp-text">20 / 20</span>
+        </div>
+        <div class="name-hp">
+          <span id="enemy-hp-label" style="color:#f88">???</span>
+          <div class="hp-bar-container"><div class="hp-bar" id="enemy-hp-bar" style="background:#f44"></div></div>
+        </div>
+      </div>
+      <div id="enemy-area">
+        <div id="enemy-sprite">👁</div>
+        <div id="enemy-name">ENEMY</div>
+      </div>
+      <div id="dialogue-box">
+        <div class="speaker" id="battle-speaker">*</div>
+        <div id="dialogue-text">...</div>
+      </div>
+      <div id="battle-box">
+        <div id="mode-indicator">GREEN MODE</div>
+        <div id="soul"><div class="heart"></div></div>
+        <div id="shield"></div>
+      </div>
+      <div id="menu">
+        <div class="menu-item" data-action="fight">FIGHT</div>
+        <div class="menu-item selected" data-action="act">ACT</div>
+        <div class="menu-item" data-action="item">ITEM</div>
+        <div class="menu-item" data-action="mercy">MERCY</div>
+      </div>
+      <div id="instructions">GREEN — Arrow keys face your shield to block</div>
+    </div>
+
+    <!-- RESULT -->
+    <div id="result-screen" class="screen">
+      <h2 id="result-title">YOU WIN</h2>
+      <p id="result-text"></p>
+      <button class="btn green" id="restart-btn">PLAY AGAIN</button>
+    </div>
+  </div>
+
+<script>
+// ============================================================
+//  UNDERTALE GREEN — Main Game Script
+// ============================================================
+
+const G = {
+  // Core state
+  screen: 'title',
+  playerHP: 20,
+  playerMaxHP: 20,
+  lv: 1,
+  kills: 0,
+  totalPossibleKills: 6,
+  spared: 0,
+  inventory: ['Monster Candy', 'Monster Candy', 'Monster Candy'],
+  sleeping: false,
+  sleepTimer: null,
+  checkpoint: null, // { room, x, y, hp, maxHp, inventory, flags, kills, lv }
+  flags: {
+    metFlowey: false,
+    metToriel: false,
+    leftRuins: false,
+    metAsgore: false,
+    independent: false,
+  },
+  currentRoom: 'ruins1',
+  // Battle
+  inBattle: false,
+  enemy: null,
+  phase: 'menu',          // menu | attack | dialogue
+  selectedMenu: 1,
+  shieldDir: 0,           // 0=up, 1=right, 2=down, 3=left
+  projectiles: [],
+  attackTimer: null,
+  wave: 0,
+  invincible: false,
+  soulMode: 'green',      // green | red
+  redTimer: 0,
+  redDuration: 10000,
+  canInput: true,
+  // Story
+  storyIndex: 0,
+  storyScript: [],
+  // Overworld
+  playerX: 300,
+  playerY: 220,
+  keys: {},
+  npcs: [],
+  rooms: {},
+};
+
+// ---------- DOM ----------
+const $ = id => document.getElementById(id);
+const screens = {
+  title: $('title-screen'),
+  story: $('story-screen'),
+  overworld: $('overworld-screen'),
+  battle: $('battle-screen'),
+  result: $('result-screen'),
+};
+
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+  G.screen = name;
+}
+
+// ---------- ROOMS ----------
+G.rooms = {
+  ruins1: {
+    name: 'Ruins Entrance',
+    w: 640, h: 400,
+    bg: '#1a1020',
+    exits: [
+      { x: 300, y: 10, w: 40, h: 20, to: 'ruins2', px: 310, py: 360 }
+    ],
+    obstacles: [
+      { x: 0, y: 0, w: 640, h: 20 },
+      { x: 0, y: 380, w: 640, h: 20 },
+      { x: 0, y: 0, w: 20, h: 400 },
+      { x: 620, y: 0, w: 20, h: 400 },
+      { x: 100, y: 120, w: 80, h: 40 },
+      { x: 460, y: 200, w: 60, h: 60 },
+    ],
+    npcs: [
+      { id: 'flowey', x: 310, y: 160, emoji: '🌻', name: 'Flowey',
+        talk: () => startStory(floweyIntro) },
+      { id: 'checkpoint1', x: 100, y: 300, emoji: '💾', name: 'Checkpoint',
+        talk: () => useCheckpoint() }
+    ],
+    onEnter: () => {
+      if (!G.flags.metFlowey) {
+        setTimeout(() => startStory(floweyIntro), 400);
+      }
+    }
+  },
+  ruins2: {
+    name: 'Ruins Hall',
+    w: 640, h: 400,
+    bg: '#1a1020',
+    exits: [
+      { x: 300, y: 380, w: 40, h: 20, to: 'ruins1', px: 310, py: 40 },
+      { x: 300, y: 10, w: 40, h: 20, to: 'ruins3', px: 310, py: 360 }
+    ],
+    obstacles: [
+      { x: 0, y: 0, w: 640, h: 20 }, { x: 0, y: 380, w: 640, h: 20 },
+      { x: 0, y: 0, w: 20, h: 400 }, { x: 620, y: 0, w: 20, h: 400 },
+      { x: 200, y: 150, w: 40, h: 100 }, { x: 400, y: 100, w: 40, h: 140 },
+    ],
+    npcs: [
+      { id: 'froggit', x: 150, y: 250, emoji: '🐸', name: 'Froggit',
+        talk: () => startBattle(enemies.froggit), canFight: true },
+      { id: 'whimsun', x: 480, y: 180, emoji: '🦋', name: 'Whimsun',
+        talk: () => startBattle(enemies.whimsun), canFight: true }
+    ],
+    onEnter: null
+  },
+  ruins3: {
+    name: 'Toriel\'s Home',
+    w: 640, h: 400,
+    bg: '#201018',
+    exits: [
+      { x: 300, y: 380, w: 40, h: 20, to: 'ruins2', px: 310, py: 40 },
+      { x: 600, y: 180, w: 20, h: 40, to: 'snowdin1', px: 40, py: 200, require: () => G.flags.metToriel }
+    ],
+    obstacles: [
+      { x: 0, y: 0, w: 640, h: 20 }, { x: 0, y: 380, w: 640, h: 20 },
+      { x: 0, y: 0, w: 20, h: 400 }, { x: 620, y: 0, w: 20, h: 180 },
+      { x: 620, y: 220, w: 20, h: 180 },
+    ],
+    npcs: [
+      { id: 'toriel', x: 320, y: 140, emoji: '🐐', name: 'Toriel',
+        talk: () => {
+          if (!G.flags.metToriel) startStory(torielMeet);
+          else startStory(torielLater);
+        }
+      },
+      { id: 'bed', x: 480, y: 120, emoji: '🛏️', name: 'Bed',
+        talk: () => useBed() }
+    ],
+    onEnter: () => {
+      if (!G.flags.metToriel) setTimeout(() => startStory(torielMeet), 300);
+    }
+  },
+  snowdin1: {
+    name: 'Snowdin Path',
+    w: 640, h: 400,
+    bg: '#0e1a2a',
+    exits: [
+      { x: 10, y: 180, w: 20, h: 40, to: 'ruins3', px: 580, py: 200 },
+      { x: 600, y: 180, w: 20, h: 40, to: 'snowdin2', px: 40, py: 200 }
+    ],
+    obstacles: [
+      { x: 0, y: 0, w: 640, h: 20 }, { x: 0, y: 380, w: 640, h: 20 },
+      { x: 0, y: 0, w: 20, h: 180 }, { x: 0, y: 220, w: 20, h: 180 },
+      { x: 620, y: 0, w: 20, h: 180 }, { x: 620, y: 220, w: 20, h: 180 },
+      { x: 250, y: 80, w: 50, h: 50 }, { x: 400, y: 250, w: 70, h: 40 },
+    ],
+    npcs: [
+      { id: 'snowdrake', x: 200, y: 200, emoji: '❄️', name: 'Snowdrake',
+        talk: () => startBattle(enemies.snowdrake), canFight: true },
+      { id: 'icecap', x: 450, y: 150, emoji: '🎩', name: 'Ice Cap',
+        talk: () => startBattle(enemies.icecap), canFight: true }
+    ],
+    onEnter: () => {
+      G.flags.leftRuins = true;
+      G.flags.independent = true;
+    }
+  },
+  snowdin2: {
+    name: 'Snowdin Town',
+    w: 640, h: 400,
+    bg: '#0e1a2a',
+    exits: [
+      { x: 10, y: 180, w: 20, h: 40, to: 'snowdin1', px: 580, py: 200 },
+      { x: 300, y: 10, w: 40, h: 20, to: 'waterfall', px: 310, py: 360 }
+    ],
+    obstacles: [
+      { x: 0, y: 0, w: 640, h: 20 }, { x: 0, y: 380, w: 640, h: 20 },
+      { x: 0, y: 0, w: 20, h: 180 }, { x: 0, y: 220, w: 20, h: 180 },
+      { x: 150, y: 100, w: 80, h: 60 }, { x: 400, y: 200, w: 100, h: 50 },
+    ],
+    npcs: [
+      { id: 'asgore', x: 320, y: 160, emoji: '👑', name: 'Asgore',
+        talk: () => {
+          if (!G.flags.metAsgore) startStory(asgoreMeet);
+          else startStory(asgoreLater);
+        }
+      },
+      { id: 'loox', x: 500, y: 280, emoji: '👁️', name: 'Loox',
+        talk: () => startBattle(enemies.loox), canFight: true },
+      { id: 'checkpoint2', x: 120, y: 300, emoji: '💾', name: 'Checkpoint',
+        talk: () => useCheckpoint() }
+    ],
+    onEnter: null
+  },
+  waterfall: {
+    name: 'Waterfall',
+    w: 640, h: 400,
+    bg: '#0a1520',
+    exits: [
+      { x: 300, y: 380, w: 40, h: 20, to: 'snowdin2', px: 310, py: 40 },
+      { x: 300, y: 10, w: 40, h: 20, to: 'final', px: 310, py: 360 }
+    ],
+    obstacles: [
+      { x: 0, y: 0, w: 640, h: 20 }, { x: 0, y: 380, w: 640, h: 20 },
+      { x: 0, y: 0, w: 20, h: 400 }, { x: 620, y: 0, w: 20, h: 400 },
+      { x: 180, y: 120, w: 40, h: 160 }, { x: 420, y: 80, w: 40, h: 200 },
+    ],
+    npcs: [
+      { id: 'undyne', x: 320, y: 180, emoji: '🗡️', name: 'Undyne',
+        talk: () => {
+          const route = getRoute();
+          if (route === 'pacifist') startStory(undynePacifist);
+          else if (route === 'genocide') startStory(undyneGenocide);
+          else startBattle(enemies.undyne);
+        }
+      },
+      { id: 'moldsmal', x: 120, y: 280, emoji: '🟢', name: 'Moldsmal',
+        talk: () => startBattle(enemies.moldsmal), canFight: true }
+    ],
+    onEnter: null
+  },
+  final: {
+    name: 'New Home',
+    w: 640, h: 400,
+    bg: '#150a10',
+    exits: [
+      { x: 300, y: 380, w: 40, h: 20, to: 'waterfall', px: 310, py: 40 }
+    ],
+    obstacles: [
+      { x: 0, y: 0, w: 640, h: 20 }, { x: 0, y: 380, w: 640, h: 20 },
+      { x: 0, y: 0, w: 20, h: 400 }, { x: 620, y: 0, w: 20, h: 400 },
+    ],
+    npcs: [
+      { id: 'flowey_final', x: 310, y: 160, emoji: '🌻', name: 'Flowey',
+        talk: () => {
+          const route = getRoute();
+          if (route === 'pacifist') startStory(pacifistEnding);
+          else if (route === 'genocide') startBattle(enemies.flowey);
+          else startStory(neutralEnding);
+        }
+      }
+    ],
+    onEnter: () => {
+      setTimeout(() => {
+        const route = getRoute();
+        if (route === 'pacifist') startStory(pacifistEnding);
+        else if (route === 'genocide') startBattle(enemies.flowey);
+        else startStory(neutralEnding);
+      }, 500);
+    }
+  }
+};
+
+// ---------- ENEMIES ----------
+const enemies = {
+  froggit: {
+    name: 'Froggit', emoji: '🐸', hp: 30, maxHp: 30, atk: 3,
+    acts: ['Compliment', 'Threaten'],
+    spareable: true,
+    attackPattern: 'basic',
+    flavor: ['Froggit hops nervously.', 'Froggit is intimidated by your kindness.']
+  },
+  whimsun: {
+    name: 'Whimsun', emoji: '🦋', hp: 20, maxHp: 20, atk: 2,
+    acts: ['Console', 'Terrorize'],
+    spareable: true,
+    attackPattern: 'basic',
+    flavor: ['Whimsun avoids eye contact.', 'Whimsun is shaking.']
+  },
+  snowdrake: {
+    name: 'Snowdrake', emoji: '❄️', hp: 45, maxHp: 45, atk: 4,
+    acts: ['Laugh', 'Heckle'],
+    spareable: true,
+    attackPattern: 'basic',
+    flavor: ['Snowdrake tries a pun.', 'Snowdrake is getting colder.']
+  },
+  icecap: {
+    name: 'Ice Cap', emoji: '🎩', hp: 40, maxHp: 40, atk: 4,
+    acts: ['Ignore', 'Steal'],
+    spareable: true,
+    attackPattern: 'basic',
+    flavor: ['Ice Cap adjusts its hat.', 'Ice Cap feels stylish.']
+  },
+  loox: {
+    name: 'Loox', emoji: '👁️', hp: 50, maxHp: 50, atk: 5,
+    acts: ['Pick On', 'Don\'t Pick On'],
+    spareable: true,
+    attackPattern: 'basic',
+    flavor: ['Loox is staring.', 'Loox blinks slowly.']
+  },
+  moldsmal: {
+    name: 'Moldsmal', emoji: '🟢', hp: 35, maxHp: 35, atk: 3,
+    acts: ['Imitate', 'Flirt'],
+    spareable: true,
+    attackPattern: 'basic',
+    flavor: ['Moldsmal jiggles.', 'Moldsmal is stationary.']
+  },
+  undyne: {
+    name: 'Undyne', emoji: '🗡️', hp: 100, maxHp: 100, atk: 6,
+    acts: ['Challenge', 'Plead'],
+    spareable: false,
+    attackPattern: 'undyne',
+    boss: true,
+    flavor: ['Undyne glares at you!', 'The air crackles with energy.']
+  },
+  flowey: {
+    name: 'Flowey', emoji: '🌻', hp: 120, maxHp: 120, atk: 4,
+    acts: ['Talk', 'Threaten'],
+    spareable: false,
+    attackPattern: 'flowey',
+    boss: true,
+    flavor: ['Flowey grins widely.', 'Howdy!']
+  }
+};
+
+// ---------- STORY SCRIPTS ----------
+const introScript = [
+  { emoji: '🏔️', label: 'Mount Ebott — 2003', speaker: '*', text: 'The year is 2003.' },
+  { emoji: '🏔️', label: 'Mount Ebott — 2003', speaker: '*', text: 'Legends say those who climb Mount Ebott never return.' },
+  { emoji: '🧒', label: 'Willow', speaker: '*', text: 'You, Willow, have come here seeking adventure...' },
+  { emoji: '🕳️', label: '...', speaker: '*', text: 'You slip on a loose rock.' },
+  { emoji: '💫', label: 'Falling...', speaker: '*', text: 'The world tumbles around you as you fall into the darkness.' },
+  { emoji: '🌻', label: 'The Ruins', speaker: '*', text: 'You land softly on a bed of golden flowers.' },
+];
+
+const floweyIntro = [
+  { emoji: '🌻', label: 'The Ruins', speaker: 'Flowey', text: 'Howdy! I\'m Flowey. Flowey the flower!' },
+  { emoji: '🌻', label: 'The Ruins', speaker: 'Flowey', text: 'Hmm... you look new here. What\'s your name?' },
+  { emoji: '🌻', label: 'The Ruins', speaker: 'Flowey', text: 'Willow, huh? That\'s a nice name!' },
+  { emoji: '🌻', label: 'The Ruins', speaker: 'Flowey', text: 'You must be so confused... Someone ought to teach you how things work around here!' },
+  { emoji: '🌻', label: 'The Ruins', speaker: 'Flowey', text: 'In this world, it\'s kill or be killed... wait.' },
+  { emoji: '🌻', label: 'The Ruins', speaker: 'Flowey', text: '...Actually, you seem different. Your SOUL... it\'s green.' },
+  { emoji: '💚', label: 'The Ruins', speaker: 'Flowey', text: 'Kindness. How rare. Maybe... maybe I don\'t have to hurt you.' },
+  { emoji: '🌻', label: 'The Ruins', speaker: 'Flowey', text: 'Go on. The Ruins are ahead. Be careful, friend.' },
+  { emoji: '🌻', label: 'The Ruins', speaker: '*', text: 'Flowey sinks into the ground with a smile.', flag: 'metFlowey' }
+];
+
+const torielMeet = [
+  { emoji: '🐐', label: 'Toriel\'s Home', speaker: 'Toriel', text: 'What a surprise! A human... after all this time.' },
+  { emoji: '🐐', label: 'Toriel\'s Home', speaker: 'Toriel', text: 'My name is Toriel, caretaker of the Ruins.' },
+  { emoji: '🐐', label: 'Toriel\'s Home', speaker: 'Toriel', text: 'You must be so lost and confused... Come. I will take care of you.' },
+  { emoji: '🐐', label: 'Toriel\'s Home', speaker: 'Toriel', text: 'Your SOUL glows with kindness. That is a precious thing, my child.' },
+  { emoji: '🐐', label: 'Toriel\'s Home', speaker: 'Toriel', text: 'Rest here as long as you need. When you are ready... the exit is to the east.' },
+  { emoji: '🐐', label: 'Toriel\'s Home', speaker: '*', text: 'Toriel smiles warmly.', flag: 'metToriel' }
+];
+
+const torielLater = [
+  { emoji: '🐐', label: 'Toriel\'s Home', speaker: 'Toriel', text: 'Still here, Willow? You are always welcome.' },
+  { emoji: '🐐', label: 'Toriel\'s Home', speaker: 'Toriel', text: 'Be safe out there. The world beyond is not always kind.' }
+];
+
+const asgoreMeet = [
+  { emoji: '👑', label: 'Snowdin Town', speaker: 'Asgore', text: 'Oh! A human... I did not expect to see one so soon.' },
+  { emoji: '👑', label: 'Snowdin Town', speaker: 'Asgore', text: 'I am Asgore, king of the monsters.' },
+  { emoji: '👑', label: 'Snowdin Town', speaker: 'Asgore', text: 'Your SOUL... green. Kindness. How refreshing.' },
+  { emoji: '👑', label: 'Snowdin Town', speaker: 'Asgore', text: 'I will not stop you, child. Walk your own path.' },
+  { emoji: '👑', label: 'Snowdin Town', speaker: '*', text: 'Asgore steps aside.', flag: 'metAsgore' }
+];
+
+const asgoreLater = [
+  { emoji: '👑', label: 'Snowdin Town', speaker: 'Asgore', text: 'The path ahead leads to Waterfall... and beyond.' },
+  { emoji: '👑', label: 'Snowdin Town', speaker: 'Asgore', text: 'May kindness guide you, Willow.' }
+];
+
+const undynePacifist = [
+  { emoji: '🗡️', label: 'Waterfall', speaker: 'Undyne', text: '...You\'ve spared everyone.' },
+  { emoji: '🗡️', label: 'Waterfall', speaker: 'Undyne', text: 'I was ready to fight you. But... looking at you...' },
+  { emoji: '🗡️', label: 'Waterfall', speaker: 'Undyne', text: 'Go. I won\'t stand in the way of a true pacifist.' },
+  { emoji: '🗡️', label: 'Waterfall', speaker: '*', text: 'Undyne lowers her spear.' }
+];
+
+const undyneGenocide = [
+  { emoji: '🗡️', label: 'Waterfall', speaker: 'Undyne', text: 'You... you\'ve killed them all.' },
+  { emoji: '🗡️', label: 'Waterfall', speaker: 'Undyne', text: 'I won\'t let you take another step!!' },
+  { emoji: '🗡️', label: 'Waterfall', speaker: '*', text: 'Undyne attacks!', battle: 'undyne' }
+];
+
+const pacifistEnding = [
+  { emoji: '🌻', label: 'New Home', speaker: 'Flowey', text: 'You did it. You really did it...' },
+  { emoji: '🌻', label: 'New Home', speaker: 'Flowey', text: 'Not a single monster hurt. Pure kindness.' },
+  { emoji: '🌻', label: 'New Home', speaker: 'Flowey', text: 'But kindness has a price in this world, Willow.' },
+  { emoji: '💔', label: 'New Home', speaker: 'Flowey', text: 'Your SOUL... it\'s too pure. Too bright.' },
+  { emoji: '🖤', label: '...', speaker: '*', text: 'Darkness closes in.' },
+  { emoji: '💚', label: 'The End?', speaker: '*', text: 'You feel your SOUL being pulled away...' },
+  { emoji: '💚', label: 'True Ending', speaker: '*', text: 'Willow\'s SOUL of Kindness was captured.', ending: 'pacifist' }
+];
+
+const neutralEnding = [
+  { emoji: '🌻', label: 'New Home', speaker: 'Flowey', text: 'So you made it this far... with blood on your hands, and mercy in your heart.' },
+  { emoji: '🌻', label: 'New Home', speaker: 'Flowey', text: 'A neutral path. Neither pure nor empty.' },
+  { emoji: '🌻', label: 'New Home', speaker: 'Flowey', text: 'Undyne is waiting. Go face her. That is your ending.' },
+  { emoji: '🗡️', label: 'The End', speaker: '*', text: 'You turn back to face Undyne one last time...', battle: 'undyne_final' }
+];
+
+const genocideEndingText = [
+  { emoji: '🌻', label: 'New Home', speaker: 'Flowey', text: 'You... you killed everyone.' },
+  { emoji: '🌻', label: 'New Home', speaker: 'Flowey', text: 'I thought kindness meant something. But you...' },
+  { emoji: '🌻', label: 'New Home', speaker: 'Flowey', text: 'Fine. Let\'s play a different game.' }
+];
+
+// ---------- CHECKPOINT & BED ----------
+function useCheckpoint() {
+  // Save current state
+  G.checkpoint = {
+    room: G.currentRoom,
+    x: G.playerX,
+    y: G.playerY,
+    hp: G.playerHP,
+    maxHp: G.playerMaxHP,
+    inventory: [...G.inventory],
+    flags: { ...G.flags },
+    kills: G.kills,
+    lv: G.lv,
+    spared: G.spared
+  };
+  // Also fully heal
+  G.playerHP = G.playerMaxHP;
+  updateRouteUI();
+  startStory([
+    { emoji: '💾', label: 'Checkpoint', speaker: '*', text: 'You touch the glowing save point.' },
+    { emoji: '💾', label: 'Checkpoint', speaker: '*', text: 'Progress saved. HP fully restored.' },
+    { emoji: '💾', label: 'Checkpoint', speaker: '*', text: `WILLOW  LV ${G.lv}  HP ${G.playerHP}/${G.playerMaxHP}` }
+  ]);
+}
+
+function loadCheckpoint() {
+  if (!G.checkpoint) return false;
+  const c = G.checkpoint;
+  G.currentRoom = c.room;
+  G.playerX = c.x;
+  G.playerY = c.y;
+  G.playerHP = c.hp;
+  G.playerMaxHP = c.maxHp;
+  G.inventory = [...c.inventory];
+  G.flags = { ...c.flags };
+  G.kills = c.kills;
+  G.lv = c.lv;
+  G.spared = c.spared;
+  loadRoom(c.room);
+  return true;
+}
+
+function useBed() {
+  if (G.sleeping) {
+    // Stop sleeping
+    G.sleeping = false;
+    if (G.sleepTimer) { clearInterval(G.sleepTimer); G.sleepTimer = null; }
+    startStory([
+      { emoji: '🛏️', label: 'Bed', speaker: '*', text: 'You get out of bed.' },
+      { emoji: '🛏️', label: 'Bed', speaker: '*', text: `Your max HP is now ${G.playerMaxHP}.` }
+    ]);
+    return;
+  }
+  // Start sleeping
+  G.sleeping = true;
+  startStory([
+    { emoji: '🛏️', label: 'Bed', speaker: '*', text: 'You lie down in Toriel\'s bed...' },
+    { emoji: '🛏️', label: 'Bed', speaker: '*', text: 'You begin to rest. (Every 2 seconds your max HP increases by 1)' },
+    { emoji: '🛏️', label: 'Bed', speaker: '*', text: 'Talk to the bed again to get up.' }
+  ]);
+  G.sleepTimer = setInterval(() => {
+    if (!G.sleeping) { clearInterval(G.sleepTimer); G.sleepTimer = null; return; }
+    G.playerMaxHP += 1;
+    G.playerHP = G.playerMaxHP; // also fully heal while resting
+    updateRouteUI();
+  }, 2000);
+}
+
+// ---------- ROUTE ----------
+function getRoute() {
+  if (G.kills === 0) return 'pacifist';
+  if (G.kills >= G.totalPossibleKills) return 'genocide';
+  return 'neutral';
+}
+
+function updateRouteUI() {
+  const r = getRoute();
+  const label = $('route-label');
+  if (r === 'pacifist') { label.textContent = 'Route: PACIFIST'; label.style.color = '#0f0'; }
+  else if (r === 'genocide') { label.textContent = 'Route: GENOCIDE'; label.style.color = '#f00'; }
+  else { label.textContent = 'Route: NEUTRAL'; label.style.color = '#ff0'; }
+  $('kill-count').textContent = G.kills;
+  $('ow-hp').textContent = `${G.playerHP}/${G.playerMaxHP}`;
+}
+
+// ---------- STORY ENGINE ----------
+function startStory(script) {
+  G.storyScript = script;
+  G.storyIndex = 0;
+  showScreen('story');
+  showStoryLine();
+}
+
+function showStoryLine() {
+  if (G.storyIndex >= G.storyScript.length) {
+    // End of script
+    const last = G.storyScript[G.storyScript.length - 1];
+    if (last.flag) G.flags[last.flag] = true;
+    if (last.ending) {
+      endGame(last.ending);
+      return;
+    }
+    if (last.battle) {
+      if (last.battle === 'undyne_final') startBattle(enemies.undyne);
+      else startBattle(enemies[last.battle]);
+      return;
+    }
+    // Return to overworld
+    loadRoom(G.currentRoom);
+    return;
+  }
+  const line = G.storyScript[G.storyIndex];
+  $('story-emoji').textContent = line.emoji || '•';
+  $('scene-label').textContent = line.label || '';
+  $('story-speaker').textContent = line.speaker || '*';
+  $('story-text').textContent = line.text || '';
+}
+
+function advanceStory() {
+  G.storyIndex++;
+  showStoryLine();
+}
+
+// ---------- OVERWORLD ----------
+function loadRoom(id) {
+  // Stop sleeping if leaving Toriel's house
+  if (G.sleeping) {
+    G.sleeping = false;
+    if (G.sleepTimer) { clearInterval(G.sleepTimer); G.sleepTimer = null; }
+  }
+  G.currentRoom = id;
+  const room = G.rooms[id];
+  const map = $('map');
+  map.innerHTML = '';
+  map.style.background = room.bg || '#16213e';
+
+  // Player
+  const player = document.createElement('div');
+  player.id = 'player';
+  player.innerHTML = '<div class="heart"></div>';
+  player.style.left = G.playerX + 'px';
+  player.style.top = G.playerY + 'px';
+  map.appendChild(player);
+
+  // Obstacles
+  (room.obstacles || []).forEach(o => {
+    const el = document.createElement('div');
+    el.className = 'obstacle';
+    el.style.left = o.x + 'px';
+    el.style.top = o.y + 'px';
+    el.style.width = o.w + 'px';
+    el.style.height = o.h + 'px';
+    map.appendChild(el);
+  });
+
+  // Exits (invisible triggers)
+  (room.exits || []).forEach(e => {
+    const el = document.createElement('div');
+    el.className = 'exit';
+    el.style.left = e.x + 'px';
+    el.style.top = e.y + 'px';
+    el.style.width = e.w + 'px';
+    el.style.height = e.h + 'px';
+    el.style.background = 'transparent';
+    el.dataset.to = e.to;
+    el.dataset.px = e.px;
+    el.dataset.py = e.py;
+    if (e.require) el.dataset.require = '1';
+    map.appendChild(el);
+  });
+
+  // NPCs
+  G.npcs = [];
+  (room.npcs || []).forEach(n => {
+    // Skip dead monsters
+    if (n.canFight && G.flags['killed_' + n.id]) return;
+    if (n.canFight && G.flags['spared_' + n.id]) return;
+
+    const el = document.createElement('div');
+    el.className = 'npc';
+    el.textContent = n.emoji;
+    el.style.left = n.x + 'px';
+    el.style.top = n.y + 'px';
+    el.dataset.id = n.id;
+    map.appendChild(el);
+    G.npcs.push({ ...n, el });
+  });
+
+  showScreen('overworld');
+  updateRouteUI();
+  if (room.onEnter) room.onEnter();
+}
+
+function owUpdate() {
+  if (G.screen !== 'overworld') return;
+
+  const speed = 2.5;
+  let dx = 0, dy = 0;
+  if (G.keys['ArrowUp'] || G.keys['w'] || G.keys['W']) dy = -speed;
+  if (G.keys['ArrowDown'] || G.keys['s'] || G.keys['S']) dy = speed;
+  if (G.keys['ArrowLeft'] || G.keys['a'] || G.keys['A']) dx = -speed;
+  if (G.keys['ArrowRight'] || G.keys['d'] || G.keys['D']) dx = speed;
+
+  if (dx || dy) {
+    const nx = G.playerX + dx;
+    const ny = G.playerY + dy;
+    if (!owCollide(nx, ny)) {
+      G.playerX = nx;
+      G.playerY = ny;
+      const p = $('player');
+      if (p) { p.style.left = G.playerX + 'px'; p.style.top = G.playerY + 'px'; }
+    }
+  }
+
+  // Check exits
+  const room = G.rooms[G.currentRoom];
+  (room.exits || []).forEach(e => {
+    if (G.playerX + 10 > e.x && G.playerX < e.x + e.w &&
+        G.playerY + 10 > e.y && G.playerY < e.y + e.h) {
+      if (e.require && !e.require()) return;
+      G.playerX = e.px;
+      G.playerY = e.py;
+      loadRoom(e.to);
+    }
+  });
+}
+
+function owCollide(x, y) {
+  const room = G.rooms[G.currentRoom];
+  const pw = 16, ph = 16;
+  for (const o of (room.obstacles || [])) {
+    if (x < o.x + o.w && x + pw > o.x && y < o.y + o.h && y + ph > o.y) return true;
+  }
+  return false;
+}
+
+function tryInteract() {
+  if (G.screen !== 'overworld') return;
+  for (const n of G.npcs) {
+    const dx = Math.abs(G.playerX - n.x);
+    const dy = Math.abs(G.playerY - n.y);
+    if (dx < 36 && dy < 36) {
+      n.talk();
+      return;
+    }
+  }
+}
+
+// ---------- BATTLE SYSTEM ----------
+function startBattle(enemyData) {
+  G.inBattle = true;
+  G.enemy = { ...enemyData, hp: enemyData.hp };
+  G.phase = 'menu';
+  G.selectedMenu = 1;
+  G.wave = 0;
+  G.projectiles = [];
+  G.soulMode = 'green';
+  G.redTimer = 0;
+  G.canInput = true;
+  G.shieldDir = 0;
+
+  // Boss HP overrides for Willow
+  if (enemyData.name === 'Undyne') {
+    G.playerHP = 35;
+    G.playerMaxHP = 35;
+  } else if (enemyData.name === 'Flowey') {
+    G.playerHP = 100;
+    G.playerMaxHP = 100;
+  }
+
+  $('enemy-sprite').textContent = enemyData.emoji;
+  $('enemy-name').textContent = enemyData.name;
+  $('enemy-hp-label').textContent = enemyData.name;
+  $('dialogue-text').textContent = enemyData.flavor[0] || 'A wild monster appears!';
+  $('battle-speaker').textContent = '*';
+  $('mode-indicator').style.display = 'none';
+  $('shield').style.display = 'none';
+  $('soul').classList.remove('red');
+  $('soul').querySelector('.heart').style.background = '#0f0';
+  document.getElementById('menu').style.opacity = '1';
+  document.getElementById('menu').style.pointerEvents = 'auto';
+  $('instructions').textContent = 'GREEN — Arrow keys face your shield to block';
+
+  updateBattleUI();
+  selectMenu(1);
+  showScreen('battle');
+}
+
+function updateBattleUI() {
+  const pct = (G.playerHP / G.playerMaxHP) * 100;
+  $('player-hp-bar').style.width = pct + '%';
+  $('player-hp-bar').style.background = G.playerHP > 10 ? '#0f0' : (G.playerHP > 5 ? '#ff0' : '#f00');
+  $('player-hp-text').textContent = `${G.playerHP} / ${G.playerMaxHP}`;
+  $('lv').textContent = G.lv;
+
+  if (G.enemy) {
+    const ep = (G.enemy.hp / G.enemy.maxHp) * 100;
+    $('enemy-hp-bar').style.width = ep + '%';
+  }
+}
+
+function setBattleDialogue(text, speaker = '*') {
+  $('battle-speaker').textContent = speaker;
+  $('dialogue-text').textContent = text;
+}
+
+function selectMenu(idx) {
+  G.selectedMenu = idx;
+  document.querySelectorAll('.menu-item').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+}
+
+// Shield: absolute facing
+function setShieldDir(dir) {
+  G.shieldDir = dir; // 0=up, 1=right, 2=down, 3=left
+  updateShieldVisual();
+}
+
+function updateShieldVisual() {
+  const shield = $('shield');
+  if (G.soulMode !== 'green') {
+    shield.style.display = 'none';
+    return;
+  }
+  shield.style.display = 'block';
+  // Angle: 0=up → rotate 0deg with translateY negative
+  const angles = [0, 90, 180, 270];
+  const angle = angles[G.shieldDir];
+  shield.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateY(-24px)`;
+}
+
+// Projectiles
+function spawnProjectile(fromDir, type = 'spear') {
+  const box = $('battle-box');
+  const sizeW = 260, sizeH = 200;
+  const p = document.createElement('div');
+  p.className = 'projectile ' + type;
+
+  let x, y, vx, vy;
+  const speed = 2.2 + G.wave * 0.25;
+
+  switch (fromDir) {
+    case 0: x = 30 + Math.random() * 200; y = -25; vx = 0; vy = speed; p.style.transform = 'rotate(180deg)'; break;
+    case 1: x = sizeW + 15; y = 20 + Math.random() * 160; vx = -speed; vy = 0; p.style.transform = 'rotate(-90deg)'; break;
+    case 2: x = 30 + Math.random() * 200; y = sizeH + 15; vx = 0; vy = -speed; p.style.transform = 'rotate(0deg)'; break;
+    case 3: x = -15; y = 20 + Math.random() * 160; vx = speed; vy = 0; p.style.transform = 'rotate(90deg)'; break;
+  }
+
+  p.style.left = x + 'px';
+  p.style.top = y + 'px';
+  box.appendChild(p);
+  G.projectiles.push({ el: p, x, y, vx, vy, fromDir, type, blocked: false });
+}
+
+function spawnAimed(type = 'pellet') {
+  // For red mode / Flowey: aimed at current soul position
+  const soul = $('soul');
+  const box = $('battle-box');
+  const rect = box.getBoundingClientRect();
+  // Soul is centered or free
+  let sx = 130, sy = 100;
+  if (G.soulMode === 'red') {
+    sx = parseFloat(soul.style.left) || 130;
+    sy = parseFloat(soul.style.top) || 100;
+  }
+  const p = document.createElement('div');
+  p.className = 'projectile ' + type;
+  // Spawn from random edge
+  const edge = Math.floor(Math.random() * 4);
+  let x, y;
+  if (edge === 0) { x = Math.random() * 260; y = -10; }
+  else if (edge === 1) { x = 270; y = Math.random() * 200; }
+  else if (edge === 2) { x = Math.random() * 260; y = 210; }
+  else { x = -10; y = Math.random() * 200; }
+
+  const dx = sx - x, dy = sy - y;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const speed = 2.0; // slower for Determination mode
+  p.style.left = x + 'px';
+  p.style.top = y + 'px';
+  box.appendChild(p);
+  G.projectiles.push({ el: p, x, y, vx: (dx / dist) * speed, vy: (dy / dist) * speed, fromDir: -1, type, blocked: false });
+}
+
+function updateProjectiles() {
+  const soulEl = $('soul');
+  let soulX = 130, soulY = 100;
+  if (G.soulMode === 'red') {
+    soulX = parseFloat(soulEl.style.left) || 130;
+    soulY = parseFloat(soulEl.style.top) || 100;
+  }
+  const hitR = G.soulMode === 'red' ? 10 : 12;
+  const shieldDist = 22;
+
+  for (let i = G.projectiles.length - 1; i >= 0; i--) {
+    const proj = G.projectiles[i];
+    if (proj.blocked) continue;
+
+    proj.x += proj.vx;
+    proj.y += proj.vy;
+    proj.el.style.left = proj.x + 'px';
+    proj.el.style.top = proj.y + 'px';
+
+    if (proj.x < -40 || proj.x > 300 || proj.y < -40 || proj.y > 240) {
+      proj.el.remove();
+      G.projectiles.splice(i, 1);
+      continue;
+    }
+
+    const dx = proj.x + 4 - soulX;
+    const dy = proj.y + 6 - soulY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Green shield block
+    if (G.soulMode === 'green' && proj.fromDir >= 0) {
+      // Needed face direction to block this incoming dir
+      // fromDir 0 (top→down) needs shieldDir 0 (facing up)
+      if (dist < shieldDist + 8 && G.shieldDir === proj.fromDir) {
+        proj.blocked = true;
+        proj.el.style.background = '#0f0';
+        proj.el.style.boxShadow = '0 0 8px #0f0';
+        setTimeout(() => { if (proj.el.parentNode) proj.el.remove(); }, 60);
+        G.projectiles.splice(i, 1);
+        if (G.enemy) {
+          G.enemy.hp = Math.max(0, G.enemy.hp - 1);
+          updateBattleUI();
+        }
+        continue;
+      }
+    }
+
+    // Hit
+    if (dist < hitR && !G.invincible) {
+      const dmg = G.enemy ? G.enemy.atk : 3;
+      G.playerHP = Math.max(0, G.playerHP - dmg);
+      updateBattleUI();
+      G.invincible = true;
+      soulEl.classList.add('flash-red');
+      setTimeout(() => { soulEl.classList.remove('flash-red'); G.invincible = false; }, 500);
+      proj.el.remove();
+      G.projectiles.splice(i, 1);
+      if (G.playerHP <= 0) { endBattle(false); return; }
+    }
+  }
+}
+
+// Attack waves
+function startAttackPhase() {
+  G.phase = 'attack';
+  G.canInput = true;
+  G.wave = 0;
+  G.soulMode = 'green';
+  $('soul').classList.remove('red');
+  $('soul').querySelector('.heart').style.background = '#0f0';
+  $('soul').style.left = '50%';
+  $('soul').style.top = '50%';
+  $('soul').style.transform = 'translate(-50%, -50%)';
+  updateShieldVisual();
+  $('mode-indicator').style.display = 'block';
+  $('mode-indicator').textContent = 'GREEN MODE';
+  $('mode-indicator').className = '';
+  document.getElementById('menu').style.opacity = '0.3';
+  document.getElementById('menu').style.pointerEvents = 'none';
+  $('instructions').textContent = 'Arrow keys / WASD — Face shield toward incoming attacks';
+
+  // Special: Flowey can switch to red mode mid-fight (slightly less often)
+  if (G.enemy && G.enemy.name === 'Flowey' && Math.random() < 0.35) {
+    setTimeout(() => activateRedMode(), 2200);
+  }
+
+  runWave();
+}
+
+function activateRedMode() {
+  if (G.phase !== 'attack') return;
+  G.soulMode = 'red';
+  G.redTimer = Date.now();
+  $('soul').classList.add('red');
+  $('soul').querySelector('.heart').style.background = '#f00';
+  $('shield').style.display = 'none';
+  $('mode-indicator').textContent = 'DETERMINATION — 10s';
+  $('mode-indicator').className = 'red';
+  $('instructions').textContent = 'RED MODE — Move freely with arrow keys! Dodge!';
+  setBattleDialogue('Flowey: "Let\'s see how you handle THIS!"');
+
+  // Special red-mode attacks — fewer & slower pellets
+  const redInterval = setInterval(() => {
+    if (G.soulMode !== 'red' || G.phase !== 'attack') { clearInterval(redInterval); return; }
+    spawnAimed(Math.random() < 0.35 ? 'vine' : 'pellet');
+  }, 550); // was 320 — less frequent
+
+  setTimeout(() => {
+    clearInterval(redInterval);
+    if (G.phase === 'attack') {
+      G.soulMode = 'green';
+      $('soul').classList.remove('red');
+      $('soul').querySelector('.heart').style.background = '#0f0';
+      $('soul').style.left = '50%';
+      $('soul').style.top = '50%';
+      $('soul').style.transform = 'translate(-50%, -50%)';
+      updateShieldVisual();
+      $('mode-indicator').textContent = 'GREEN MODE';
+      $('mode-indicator').className = '';
+      $('instructions').textContent = 'Arrow keys / WASD — Face shield toward incoming attacks';
+      setBattleDialogue('Flowey: "Back to the usual..."');
+    }
+  }, G.redDuration);
+}
+
+function runWave() {
+  if (G.phase !== 'attack') return;
+  G.wave++;
+  let maxWaves = 4;
+  if (G.enemy && G.enemy.name === 'Undyne') maxWaves = 3;
+  else if (G.enemy && G.enemy.name === 'Flowey') maxWaves = 4;
+  else if (G.enemy && G.enemy.boss) maxWaves = 6;
+  if (G.wave > maxWaves) {
+    endAttackPhase();
+    return;
+  }
+  setBattleDialogue(`* Wave ${G.wave}`);
+
+  const pattern = G.enemy ? G.enemy.attackPattern : 'basic';
+  if (pattern === 'undyne') {
+    // Spears from sides — slightly easier (fewer + slower spacing)
+    const count = 2 + G.wave; // was 3 + wave
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => spawnProjectile(Math.floor(Math.random() * 4), 'spear'), i * 280);
+    }
+  } else if (pattern === 'flowey') {
+    // Easier Flowey: fewer projectiles, more spacing
+    const count = 2 + Math.min(G.wave, 2);
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        if (G.soulMode === 'green') spawnProjectile(i % 4, Math.random() < 0.3 ? 'vine' : 'spear');
+        else spawnAimed('pellet');
+      }, i * 320);
+    }
+  } else {
+    // Basic
+    const dirs = G.wave <= 2 ? [0, 2] : [0, 1, 2, 3];
+    dirs.forEach((d, i) => setTimeout(() => spawnProjectile(d), i * 280));
+  }
+
+  let delay = 1800;
+  if (G.enemy && G.enemy.name === 'Undyne') delay = 2400;
+  else if (G.enemy && G.enemy.name === 'Flowey') delay = 2300; // easier pacing
+  else if (G.enemy && G.enemy.boss) delay = 2000 - G.wave * 80;
+  G.attackTimer = setTimeout(runWave, Math.max(1100, delay));
+}
+
+function endAttackPhase() {
+  G.projectiles.forEach(p => p.el.remove());
+  G.projectiles = [];
+  if (G.attackTimer) clearTimeout(G.attackTimer);
+  $('shield').style.display = 'none';
+  $('mode-indicator').style.display = 'none';
+  document.getElementById('menu').style.opacity = '1';
+  document.getElementById('menu').style.pointerEvents = 'auto';
+  G.phase = 'menu';
+  G.canInput = true;
+  G.soulMode = 'green';
+
+  if (G.enemy && G.enemy.hp <= 0) {
+    endBattle(true, false);
+    return;
+  }
+  setBattleDialogue(G.enemy.flavor[Math.floor(Math.random() * G.enemy.flavor.length)] || '* ...');
+}
+
+function doMenuAction() {
+  if (G.phase !== 'menu' || !G.canInput) return;
+  const action = document.querySelectorAll('.menu-item')[G.selectedMenu].dataset.action;
+  G.canInput = false;
+
+  if (action === 'fight') {
+    setBattleDialogue('* You attack with kindness-tinged force...');
+    setTimeout(() => {
+      const dmg = 6 + Math.floor(Math.random() * 5) + (G.lv - 1) * 2;
+      G.enemy.hp = Math.max(0, G.enemy.hp - dmg);
+      updateBattleUI();
+      $('enemy-sprite').classList.add('shake');
+      setTimeout(() => $('enemy-sprite').classList.remove('shake'), 250);
+      setBattleDialogue(`* You dealt ${dmg} damage!`);
+      if (G.enemy.hp <= 0) {
+        setTimeout(() => endBattle(true, false), 700);
+      } else {
+        setTimeout(startAttackPhase, 900);
+      }
+    }, 700);
+  } else if (action === 'act') {
+    setBattleDialogue(`* You try to ${G.enemy.acts[0].toLowerCase()}...`);
+    setTimeout(() => {
+      setBattleDialogue('* The enemy seems moved by your kindness.');
+      G.enemy.hp = Math.max(0, G.enemy.hp - 4);
+      updateBattleUI();
+      if (G.enemy.hp <= 0) setTimeout(() => endBattle(true, false), 700);
+      else setTimeout(startAttackPhase, 900);
+    }, 800);
+  } else if (action === 'item') {
+    if (G.inventory.length > 0) {
+      const item = G.inventory.pop();
+      G.playerHP = G.playerMaxHP; // full heal
+      updateBattleUI();
+      setBattleDialogue(`* You ate the ${item}. Your HP was fully restored!`);
+    } else {
+      setBattleDialogue('* No items left...');
+    }
+    setTimeout(startAttackPhase, 900);
+  } else if (action === 'mercy') {
+    setBattleDialogue('* You reach out with kindness...');
+    setTimeout(() => {
+      if (G.enemy.spareable && G.enemy.hp < G.enemy.maxHp * 0.6) {
+        setBattleDialogue(`* You spared ${G.enemy.name}.`);
+        setTimeout(() => endBattle(true, true), 800);
+      } else if (!G.enemy.spareable) {
+        setBattleDialogue('* This enemy cannot be spared so easily.');
+        setTimeout(startAttackPhase, 900);
+      } else {
+        setBattleDialogue('* Not yet... keep going.');
+        setTimeout(startAttackPhase, 900);
+      }
+    }, 700);
+  }
+}
+
+function endBattle(won, spared) {
+  G.inBattle = false;
+  G.projectiles.forEach(p => p.el.remove());
+  G.projectiles = [];
+  if (G.attackTimer) clearTimeout(G.attackTimer);
+
+  if (won) {
+    if (spared) {
+      G.spared++;
+      G.flags['spared_' + (G.enemy.name || '').toLowerCase().replace(/\s/g, '')] = true;
+      // Mark by id if possible
+      const room = G.rooms[G.currentRoom];
+      if (room) {
+        room.npcs.forEach(n => {
+          if (n.name === G.enemy.name) G.flags['spared_' + n.id] = true;
+        });
+      }
+    } else {
+      G.kills++;
+      G.lv = Math.min(5, 1 + Math.floor(G.kills / 2));
+      G.playerMaxHP = 20 + (G.lv - 1) * 4;
+      G.playerHP = Math.min(G.playerMaxHP, G.playerHP + 5);
+      const room = G.rooms[G.currentRoom];
+      if (room) {
+        room.npcs.forEach(n => {
+          if (n.name === G.enemy.name) G.flags['killed_' + n.id] = true;
+        });
+      }
+    }
+    updateRouteUI();
+
+    // Boss endings
+    if (G.enemy.name === 'Undyne') {
+      endGame('neutral');
+      return;
+    }
+    if (G.enemy.name === 'Flowey') {
+      endGame('genocide');
+      return;
+    }
+  } else {
+    endGame('lose');
+    return;
+  }
+
+  // Back to overworld
+  loadRoom(G.currentRoom);
+}
+
+function endGame(type) {
+  showScreen('result');
+  const title = $('result-title');
+  const text = $('result-text');
+  const screen = $('result-screen');
+  screen.className = 'screen active';
+
+  if (type === 'pacifist') {
+    screen.classList.add('true');
+    title.textContent = 'TRUE ENDING';
+    text.innerHTML = 'Willow\'s pure kindness shone too brightly.<br><br>In the end, the SOUL of Kindness was captured...<br>But the memory of mercy lives on.<br><br><span style="color:#0f0">You killed no one.</span>';
+  } else if (type === 'neutral') {
+    screen.classList.add('win');
+    title.textContent = 'NEUTRAL ENDING';
+    text.innerHTML = 'You fought Undyne and prevailed.<br><br>The Underground will remember both your mercy and your strength.<br><br>Kills: ' + G.kills;
+  } else if (type === 'genocide') {
+    screen.classList.add('win');
+    title.textContent = 'GENOCIDE ENDING';
+    text.innerHTML = 'You faced Flowey at the end of a bloody path.<br><br>Even kindness can be twisted when everything is taken.<br><br>Kills: ' + G.kills;
+  } else {
+    screen.classList.add('lose');
+    title.textContent = 'GAME OVER';
+    if (G.checkpoint) {
+      text.innerHTML = 'Willow\'s SOUL shattered...<br><br>But determination (and kindness) never truly die.<br><br>Press Enter to return to your last checkpoint.<br>Or click PLAY AGAIN to restart completely.';
+    } else {
+      text.innerHTML = 'Willow\'s SOUL shattered...<br><br>But determination (and kindness) never truly die.<br>Try again?';
+    }
+  }
+}
+
+// ---------- INPUT ----------
+document.addEventListener('keydown', e => {
+  G.keys[e.key] = true;
+
+  if (G.screen === 'title' && (e.key === 'Enter' || e.key === ' ')) {
+    startGame();
+    return;
+  }
+  if (G.screen === 'result' && (e.key === 'Enter' || e.key === ' ')) {
+    if (G.checkpoint && $('result-title').textContent === 'GAME OVER') {
+      loadCheckpoint();
+    } else {
+      location.reload();
+    }
+    return;
+  }
+  if (G.screen === 'story' && (e.key === 'Enter' || e.key === ' ' || e.key === 'z' || e.key === 'Z')) {
+    advanceStory();
+    return;
+  }
+  if (G.screen === 'overworld') {
+    if (e.key === 'Enter' || e.key === 'z' || e.key === 'Z' || e.key === ' ') tryInteract();
+    return;
+  }
+
+  if (G.screen !== 'battle' || !G.canInput) return;
+
+  if (G.phase === 'menu') {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') selectMenu((G.selectedMenu + 3) % 4);
+    else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') selectMenu((G.selectedMenu + 1) % 4);
+    else if (e.key === 'Enter' || e.key === 'z' || e.key === 'Z' || e.key === ' ') doMenuAction();
+  } else if (G.phase === 'attack') {
+    // Absolute facing for green shield
+    if (G.soulMode === 'green') {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') setShieldDir(0);
+      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') setShieldDir(1);
+      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') setShieldDir(2);
+      else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') setShieldDir(3);
+    }
+    // Red mode free movement is handled in the loop via G.keys
+  }
+});
+
+document.addEventListener('keyup', e => { G.keys[e.key] = false; });
+
+// Buttons
+$('start-btn').addEventListener('click', startGame);
+$('restart-btn').addEventListener('click', () => location.reload());
+$('story-dialogue').addEventListener('click', () => { if (G.screen === 'story') advanceStory(); });
+
+document.querySelectorAll('.menu-item').forEach((el, i) => {
+  el.addEventListener('click', () => {
+    if (G.phase === 'menu' && G.canInput) { selectMenu(i); doMenuAction(); }
+  });
+});
+
+// ---------- GAME LOOP ----------
+function gameLoop() {
+  if (G.screen === 'overworld') owUpdate();
+
+  if (G.phase === 'attack') {
+    updateProjectiles();
+
+    // Red mode movement
+    if (G.soulMode === 'red') {
+      const soul = $('soul');
+      let x = parseFloat(soul.style.left) || 130;
+      let y = parseFloat(soul.style.top) || 100;
+      const sp = 2.8;
+      if (G.keys['ArrowUp'] || G.keys['w'] || G.keys['W']) y -= sp;
+      if (G.keys['ArrowDown'] || G.keys['s'] || G.keys['S']) y += sp;
+      if (G.keys['ArrowLeft'] || G.keys['a'] || G.keys['A']) x -= sp;
+      if (G.keys['ArrowRight'] || G.keys['d'] || G.keys['D']) x += sp;
+      x = Math.max(8, Math.min(244, x));
+      y = Math.max(8, Math.min(184, y));
+      soul.style.left = x + 'px';
+      soul.style.top = y + 'px';
+      soul.style.transform = 'none';
+    }
+  }
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
+
+// ---------- START ----------
+function startGame() {
+  G.playerHP = 20;
+  G.playerMaxHP = 20;
+  G.lv = 1;
+  G.kills = 0;
+  G.spared = 0;
+  G.inventory = ['Monster Candy', 'Monster Candy', 'Monster Candy'];
+  G.sleeping = false;
+  if (G.sleepTimer) { clearInterval(G.sleepTimer); G.sleepTimer = null; }
+  G.checkpoint = null;
+  G.flags = { metFlowey: false, metToriel: false, leftRuins: false, metAsgore: false, independent: false };
+  G.playerX = 300;
+  G.playerY = 280;
+  startStory(introScript);
+  // After intro, load first room is handled by story end
+}
+
+// When intro finishes, go to ruins1
+const _origShowStoryLine = showStoryLine;
+// Patch: after introScript ends → load ruins1
+// (already handled by generic end-of-script → loadRoom)
+
+// Fix intro end: introScript has no special end, so after last line go to ruins1
+// We'll override the advance for the very first script by checking.
+const origAdvance = advanceStory;
+advanceStory = function() {
+  G.storyIndex++;
+  if (G.storyIndex >= G.storyScript.length) {
+    // If we just finished the intro, go to ruins
+    if (G.storyScript === introScript) {
+      G.playerX = 300;
+      G.playerY = 280;
+      loadRoom('ruins1');
+      return;
+    }
+  }
+  showStoryLine();
+};
+
+updateBattleUI();
+</script>
+</body>
+</html>
